@@ -1,279 +1,278 @@
-#include <iostream>
 #include <bits/stdc++.h>
-
 using namespace std;
-int IC[2];
-string Memory[100][4];
-string R[4];
-string IR[4];
-string buff;
-bool C;
-ifstream read_my_file;
-ofstream write_my_file;
-
-void LOAD();
-void INIT();
-void STARTEXECUTION();
-void MOS(int);
-void READ();
-void WRITE();
-void TERMINATE();
+void clearbuff();
+void loadtoMemory(int word_no);
+void MOS();
 void EXECUTEUSERPROGRAM();
+void STARTEXECUTION();
+void INIT();
+void LOAD();
+class CPU
+{
+public:
+    char R[4];
+    char IR[4];
+    int IC[2];
+    bool C;
+    static CPU *getObject()
+    {
+        return object;
+    }
 
+private:
+    CPU(){};
+    static CPU *object;
+};
+
+CPU *CPU::object = new CPU;
+CPU *cpu = CPU::getObject();
+char M[100][4];
+char BUFF[40];
+int SI = 0;
+
+fstream input;
+fstream output;
+
+void clearbuff()
+{
+    for (auto i = 0; i < 40; i++)
+    {
+        BUFF[i] = ' ';
+    }
+}
 void INIT()
 {
+    for (auto i = 0; i < 4; i++)
+    {
+        cpu->R[i] = ' ';
+        cpu->IR[i] = ' ';
+
+        if (i < 2)
+        {
+            cpu->IC[i] = ' ';
+        }
+    }
+
+    cpu->C = 0;
+    clearbuff();
+
     for (int i = 0; i < 100; i++)
     {
         for (int j = 0; j < 4; j++)
         {
-            Memory[i][j] = " ";
+            M[i][j] = ' ';
         }
     }
-    for (int i = 0; i < 4; i++)
-    {
-        R[i] = " ";
-        IR[i] = " ";
-    }
-    IC[0] = 0;
-    IC[1] = 0;
-    C = false;
 }
 
 void LOAD()
 {
-    int m = 0;
+    string line;
 
-    while (read_my_file)
+    while (!input.eof())
     {
-        // cout<<buff.size()<<endl;
-        getline(read_my_file, buff);
-        // cout<<buff.size()<<endl;
-        // cout<<buff<<endl;
-        string s = buff.substr(0, 4);
-        if (s == "$AMJ")
+        getline(input, line);
+        for (auto i = 0; i < line.size() && i < 40; i++)
+        {
+            BUFF[i] = line[i];
+        }
+        if (BUFF[0] == '$' && BUFF[1] == 'A' && BUFF[2] == 'M' && BUFF[3] == 'J')
         {
             INIT();
+            int i = 0;
+        label:
+            getline(input, line);
+            for (auto i = 0; i < line.size() && i < 40; i++)
+            {
+                BUFF[i] = line[i];
+            }
+            if (!(BUFF[0] == '$' && BUFF[1] == 'D' && BUFF[2] == 'T' && BUFF[3] == 'A'))
+            {
+                loadtoMemory(i);
+                i += 10;
+                goto label;
+            }
         }
-        else if (s == "$DTA")
+        if (BUFF[0] == '$' && BUFF[1] == 'D' && BUFF[2] == 'T' && BUFF[3] == 'A')
         {
+            clearbuff();
             STARTEXECUTION();
         }
-        else if (s == "$END")
+        if (BUFF[0] == '$' && BUFF[1] == 'E' && BUFF[2] == 'N' && BUFF[3] == 'D')
         {
-            continue;
-        }
-        else if (s != "$AMJ" && s != "$DTA" && s != "$END")
-        {
-            int j = 0;
-            for (int i = 0; i < buff.size(); i++)
+            cout << "Memory start:" << endl;
+            for (int i = 0; i < 100; i++)
             {
-                if (j == 4)
+                cout << " ";
+                if (i < 10)
+                    cout << '0';
+                cout << i << " | ";
+                for (int j = 0; j < 4; j++)
                 {
-                    j = 0;
-                    m++;
+                    cout << M[i][j] << " | ";
                 }
-                if (buff[i] == 'H')
-                {
-                    int k = 1;
-                    Memory[m][j] = buff[i];
-                    for (k = 1; k <= 3; k++)
-                    {
-                        Memory[m][k] = ' ';
-                    }
-                    j = k - 1;
-                }
-                else
-                    Memory[m][j] = buff[i];
 
-                j++;
+                cout << endl;
+                if (i % 10 == 9)
+                {
+                    cout << "    -----------------" << endl;
+                }
             }
-            m = m + 1;
+            cout << "Memory end" << endl
+                 << endl
+                 << endl;
         }
-
-        else
-            exit(0);
     }
+}
+
+void loadtoMemory(int word_no)
+{
+    int k = 0, j = 0;
+    while (BUFF[k] != '-' && k != 40)
+    {
+        M[word_no][j] = BUFF[k];
+
+        if (BUFF[k] == 'H' && SI != 1)
+        {
+            j += 3;
+        }
+        k++, j++;
+        if (j == 4)
+        {
+            j = 0;
+            word_no++;
+        }
+    }
+    clearbuff();
 }
 
 void STARTEXECUTION()
 {
-    IC[0] = 0;
-    IC[1] = 0;
+    cpu->IC[0] = 0;
+    cpu->IC[1] = 0;
     EXECUTEUSERPROGRAM();
 }
 
 void EXECUTEUSERPROGRAM()
 {
-    int u1 = 0;
-
     while (1)
     {
-        int row = IC[0] * 10 + IC[1];
         for (int i = 0; i < 4; i++)
-            IR[i] = Memory[row][i];
-        if (IC[1] == 9)
         {
-            IC[0] = IC[0] + 1;
-            IC[1] = 0;
+            cpu->IR[i] = M[cpu->IC[0] * 10 + cpu->IC[1]][i];
         }
-        else
-            IC[1] = IC[1] + 1;
-
-        string instruction = IR[0] + "" + IR[1];
-
-        if (instruction == "LR")
+        cpu->IC[1] += 1;
+        if (cpu->IC[1] == 10)
         {
+            cpu->IC[1] = 0;
+            cpu->IC[0] += 1;
+        }
+        if (cpu->IR[0] == 'G' && cpu->IR[1] == 'D')
+        {
+            SI = 1;
+            MOS();
+        }
+        else if (cpu->IR[0] == 'P' && cpu->IR[1] == 'D')
+        {
+            SI = 2;
+            MOS();
+        }
+        else if (cpu->IR[0] == 'L' && cpu->IR[1] == 'R')
+        {
+
+            int word_no = (cpu->IR[2] - '0') * 10 + (cpu->IR[3] - '0');
+
             for (int i = 0; i < 4; i++)
             {
-                R[i] = Memory[stoi(IR[2]) * 10 + stoi(IR[3])][i];
-                // cout<<R[i]<<endl;
+                cpu->R[i] = M[word_no][i];
             }
         }
-
-        else if (instruction == "SR")
+        else if (cpu->IR[0] == 'S' && cpu->IR[1] == 'R')
         {
+            int word_no = (cpu->IR[2] - '0') * 10 + (cpu->IR[3] - '0');
             for (int i = 0; i < 4; i++)
             {
-                Memory[stoi(IR[2]) * 10 + stoi(IR[3])][i] = R[i];
+                M[word_no][i] = cpu->R[i];
             }
         }
-
-        else if (instruction == "CR")
+        else if (cpu->IR[0] == 'C' && cpu->IR[1] == 'R')
         {
-            int flag = 0;
+            int word_no = (cpu->IR[2] - '0') * 10 + (cpu->IR[3] - '0');
             for (int i = 0; i < 4; i++)
             {
-                if (Memory[stoi(IR[2]) * 10 + stoi(IR[3])][i] == R[i])
-                    flag++;
+                if (M[word_no][i] == cpu->R[i])
+                {
+                    cpu->C = 1;
+                }
+                else
+                {
+                    cpu->C = 0;
+                    break;
+                }
             }
-            if (flag == 4)
+        }
+        else if (cpu->IR[0] == 'B' && cpu->IR[1] == 'T')
+        {
+            if (cpu->C == 1)
             {
-                cout << "\nFlag is True\n";
-                C = true;
-            }
-            else
-            {
-                cout << "\nFlag is False\n";
-                C = false;
+                cpu->IC[0] = cpu->IR[2] - '0';
+                cpu->IC[1] = cpu->IR[3] - '0';
             }
         }
-
-        else if (instruction == "BT")
+        else if (cpu->IR[0] == 'H')
         {
-            if (C == true)
-            {
-                IC[0] = stoi(IR[2]);
-
-                IC[1] = stoi(IR[3]);
-                // cout<<IC[0]<<IC[1];
-            }
-        }
-
-        else if (instruction == "GD")
-        {
-            u1 = 1;
-            MOS(u1);
-        }
-        else if (instruction == "PD")
-        {
-            u1 = 2;
-            MOS(u1);
-        }
-        else if (instruction == "H ")
-        {
-
-            u1 = 3;
-            MOS(u1);
+            SI = 3;
+            MOS();
             break;
         }
-        else
-            break;
     }
 }
 
-void READ()
+void MOS()
 {
-    IR[3] = '0';
-    getline(read_my_file, buff);
-    // cout << buff << endl;
-    int x = stoi(IR[2]) * 10;
 
-    int j = 0;
-    // cout << x<<endl;
-    for (int i = 0; i < buff.size(); i++)
+    if (SI == 1)
     {
-        if (j == 4)
+        cpu->IR[3] = '0';
+        int word_no = (cpu->IR[2] - '0') * 10;
+        string line;
+        getline(input, line);
+        for (auto i = 0; i < line.size() && i < 40; i++)
         {
-            j = 0;
-            x++;
+            BUFF[i] = line[i];
         }
-        Memory[x][j] = buff[i];
-        j++;
+        loadtoMemory(word_no);
+        SI = 0;
     }
-}
-
-void WRITE()
-{
-
-    IR[3] = '0';
-    int x = stoi(IR[2]) * 10;
-    // cout << endl;
-    for (int i = 0; i < 10; i++)
+    else if (SI == 2)
     {
-        for (int j = 0; j < 4; j++)
+        cpu->IR[3] = '0';
+        int row = (cpu->IR[2] - '0') * 10;
+
+        for (int i = row; i < row + 10; i++)
         {
-            // cout << Memory[x][j];
-            write_my_file << Memory[x][j];
+            for (int j = 0; j < 4; j++)
+            {
+                output << M[i][j];
+            }
         }
-        // cout << endl;
-
-        x++;
+        output << endl;
+        SI = 0;
     }
-    write_my_file << endl;
-}
-
-void TERMINATE()
-{
-    cout << endl;
-    for (int i = 0; i < 100; i++)
+    else if (SI == 3)
     {
-        cout << "M[" << i << "] ";
-        for (int j = 0; j < 4; j++)
-        {
-            cout << Memory[i][j] << " ";
-        }
-        cout << endl;
-    }
-
-    write_my_file << endl;
-    write_my_file << endl;
-
-    LOAD();
-}
-
-void MOS(int u1)
-{
-    switch (u1)
-    {
-    case 1:
-        READ();
-        break;
-    case 2:
-        WRITE();
-        break;
-    case 3:
-        TERMINATE();
-        break;
+        SI = 0;
+        output << endl
+               << endl;
     }
 }
 
 int main()
 {
-    read_my_file.open("input1.txt");
-    write_my_file.open("output1.txt");
-
+    input.open("input1.txt", ios::in);
+    output.open("output1.txt", ios::out);
     LOAD();
-
-    read_my_file.close();
-    write_my_file.close();
+    input.close();
+    output.close();
+    return 0;
 }
